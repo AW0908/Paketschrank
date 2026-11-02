@@ -74,6 +74,16 @@ body { background: var(--bg); color: var(--fg); font: 14px var(--font-ui); }
 .scr { background: var(--lcd); border-radius: 6px; padding: 8px 10px; box-shadow: inset 0 0 0 2px #000; }
 .scr .k { font-family: var(--font-lcd); font-size: .72rem; letter-spacing: .2em; color: var(--lcd-dim); text-transform: uppercase; }
 .scr .v { font-family: var(--font-lcd); font-size: 2rem; line-height: 1.1; color: var(--lcd-fg); text-shadow: 0 0 10px rgba(138,245,180,.45); font-variant-numeric: tabular-nums; }
+/* Gebühr-Anzeige: rotes Display */
+.scr.fee { background: #2a0a0c; box-shadow: inset 0 0 0 2px #000; }
+.scr.fee .k { color: #c9777b; }
+.scr.fee .v, .scr.fee .v.alarm { color: #ff8a8a; text-shadow: 0 0 10px rgba(255,138,138,.5); }
+.scr.fee.alarm { background: #5a0d12; box-shadow: inset 0 0 0 2px #000, 0 0 16px rgba(255,80,80,.55); }
+.scr.fee.alarm .v { color: #ffd0d0; text-shadow: 0 0 12px rgba(255,120,120,.8); }
+@media (prefers-reduced-motion: no-preference) {
+  .scr.fee.alarm { animation: feeGlow 1.4s ease-in-out infinite; }
+  @keyframes feeGlow { 50% { box-shadow: inset 0 0 0 2px #000, 0 0 4px rgba(255,80,80,.2); } }
+}
 .scr .v.alarm { color: #ff8a8a; text-shadow: 0 0 10px rgba(255,138,138,.5); }
 .scr .small { font-family: var(--font-lcd); font-size: .78rem; color: var(--lcd-fg); }
 .keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
@@ -183,7 +193,7 @@ body { background: var(--bg); color: var(--fg); font: 14px var(--font-ui); }
       <div class="col" id="left"></div>
       <div class="term" aria-label="Übersicht">
         <div class="scr"><div class="k">Offen</div><div class="v" id="nOpen">--</div></div>
-        <div class="scr"><div class="k">Gebühr</div><div class="v" id="nFee">--</div></div>
+        <div class="scr fee" id="feeBox"><div class="k">Gebühr</div><div class="v" id="nFee">--</div></div>
         <div class="scr"><div class="k">Stand</div><div class="small" id="stand">wird geladen</div></div>
         <div class="scr stats" aria-label="Statistik">
           <div class="k">Statistik</div>
@@ -383,6 +393,7 @@ function tick() {
   const nf = document.getElementById('nFee');
   nf.textContent = pad(fee);
   nf.classList.toggle('alarm', fee > 0);
+  document.getElementById('feeBox').classList.toggle('alarm', fee > 0);
 }
 
 let loading = null;
