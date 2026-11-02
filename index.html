@@ -56,6 +56,16 @@ body { background: var(--bg); color: var(--fg); font: 14px var(--font-ui); }
   background: var(--frame); color: #d9dde0; border-radius: 10px; padding: 10px 16px; margin-bottom: 12px; }
 .crown h1 { margin: 0; font-family: var(--font-lcd); font-weight: 400; font-size: 1.25rem; letter-spacing: .18em; text-transform: uppercase; }
 .crown .zh { font-family: var(--font-lcd); font-size: .8rem; letter-spacing: .3em; color: #9aa3a9; }
+.crown-r { display: flex; align-items: center; gap: 14px; }
+.refresh { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; border: 0; border-radius: 6px; padding: 7px 12px;
+  background: var(--lcd); color: var(--lcd-fg); box-shadow: inset 0 0 0 2px #000, 0 0 10px rgba(138,245,180,.15);
+  font-family: var(--font-lcd); font-size: .78rem; letter-spacing: .18em; text-transform: uppercase; }
+.refresh .ico { font-size: 1.05rem; letter-spacing: 0; line-height: 1; display: inline-block; }
+.refresh:active { transform: translateY(1px); }
+.refresh:focus-visible { outline: 2px solid var(--lcd-fg); outline-offset: 2px; }
+.refresh.spin .ico { animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (max-width: 420px) { .crown .zh { display: none; } }
 
 .body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 11rem; gap: 10px; align-items: start; }
 .col { display: grid; gap: 10px; align-content: start; min-width: 0; }
@@ -140,19 +150,6 @@ body { background: var(--bg); color: var(--fg); font: 14px var(--font-ui); }
 .led { animation: pulse var(--pulse, 3s) ease-in-out infinite; }
 @keyframes pulse { 50% { opacity: .3; box-shadow: none; } }
 
-/* Abholliste pro Ort */
-.route { display: grid; gap: 8px; margin-bottom: 12px; }
-.stop { display: flex; align-items: center; gap: 12px; background: var(--lcd); border-radius: 8px; padding: 10px 12px; box-shadow: inset 0 0 0 2px #000; color: var(--lcd-fg); }
-.stop .n { font-family: var(--font-lcd); font-size: 1.9rem; line-height: 1; min-width: 2.2ch; text-align: center; text-shadow: 0 0 10px rgba(138,245,180,.45); }
-.stop .t { min-width: 0; flex: 1; }
-.stop .w { font-size: .95rem; color: #d7f7e4; text-decoration: none; display: inline-block; }
-.stop .w:hover { text-decoration: underline; }
-.stop .d { font-family: var(--font-lcd); font-size: .78rem; letter-spacing: .04em; color: var(--lcd-dim); margin-top: 3px; }
-.stop .d b { font-weight: 400; color: var(--lcd-fg); }
-.stop .d b.warn { color: #ffd479; } .stop .d b.bad { color: #ff8a8a; }
-.stop .pin { flex: none; font-size: 1.1rem; text-decoration: none; color: var(--lcd-fg); opacity: .8; padding: 4px; }
-a.ort { color: inherit; text-decoration: underline dotted var(--door-edge); text-underline-offset: 3px; }
-
 .keybox { max-width: 26rem; margin: 18px auto 0; display: grid; gap: 10px; background: var(--metal); border: 3px solid var(--frame); border-radius: 12px; padding: 14px; }
 .keybox input { font: 1rem var(--font-lcd); letter-spacing: .05em; padding: 10px 12px; border-radius: 6px; border: 0; background: var(--lcd); color: var(--lcd-fg); box-shadow: inset 0 0 0 2px #000; }
 .keybox input::placeholder { color: var(--lcd-dim); }
@@ -177,9 +174,11 @@ a.ort { color: inherit; text-decoration: underline dotted var(--door-edge); text
   <div class="cab">
     <div class="crown">
       <h1>Paketschrank</h1>
-      <span class="zh">取件 · 丰巢 · 菜鸟</span>
+      <div class="crown-r">
+        <span class="zh">取件 · 丰巢 · 菜鸟</span>
+        <button class="refresh" id="refresh" type="button" aria-label="Aktualisieren"><span class="ico">↻</span><span class="txt">Aktualisieren</span></button>
+      </div>
     </div>
-    <div class="route" id="route" hidden></div>
     <div class="body">
       <div class="col" id="left"></div>
       <div class="term" aria-label="Übersicht">
@@ -222,7 +221,7 @@ let undoId = null, toastTimer = null;
 let live = [];          // sichtbare Türen für den Sekunden-Countdown
 let audio = null;
 const pending = new Set();
-const NOTE = 'Neue Abhol-SMS erscheinen alle 5 Minuten automatisch. Nach dem Abholen auf „Abgeholt“ tippen.';
+const NOTE = 'Neue Abhol-SMS erscheinen alle 5 Minuten automatisch. Nach dem Abholen auf „Abgeholt“ tippen. · Version 4';
 const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 // Schnittstelle zum Google Apps Script
@@ -265,8 +264,7 @@ function loadCache() {
   } catch (e) {}
   return false;
 }
-// Karte: Apple Karten mit der chinesischen Adresse (findet sie in China am besten)
-const mapUrl = (p) => 'https://maps.apple.com/?q=' + encodeURIComponent(p.ort || p.ort_de || '');
+
 function askKey(msg) {
   ready = false;
   document.getElementById('keybox').hidden = false;
@@ -318,9 +316,7 @@ function fullDoor(p) {
   leaf.append(lcd);
 
   const o = el('div');
-  const ol = el('a', 'ort', p.ort_de || p.ort || '–');
-  if (p.ort || p.ort_de) { ol.href = mapUrl(p); ol.target = '_blank'; ol.rel = 'noopener'; }
-  o.append(el('div', 'lbl', 'Ort'), ol);
+  o.append(el('div', 'lbl', 'Ort'), el('div', 'ort', p.ort_de || p.ort || '–'));
   if (p.ort && p.ort_de) o.append(el('div', 'zhs', p.ort));
   leaf.append(o);
 
@@ -352,42 +348,7 @@ function render() {
   document.getElementById('nOpen').textContent = pad(open.length);
   document.getElementById('stand').textContent = stand ? fmtTime.format(new Date(stand)) : (ready ? 'noch nie' : 'offline');
   renderStats();
-  renderRoute(open);
   tick();
-}
-
-const fmtHM = new Intl.DateTimeFormat('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
-function renderRoute(open) {
-  const box = document.getElementById('route');
-  box.replaceChildren();
-  const groups = new Map();
-  for (const p of open) {
-    const k = p.ort || p.ort_de || '–';
-    if (!groups.has(k)) groups.set(k, []);
-    groups.get(k).push(p);
-  }
-  box.hidden = groups.size === 0;
-  for (const list of groups.values()) {
-    const p0 = list[0]; // Liste ist schon nach Dringlichkeit sortiert
-    const fächer = [...new Set(list.map((p) => p.schrank_de || p.schrank).filter(Boolean))];
-    const h = restHours(p0);
-    const row = el('div', 'stop');
-    row.append(el('div', 'n', String(list.length)));
-    const t = el('div', 't');
-    const w = el('a', 'w', p0.ort_de || p0.ort || '–');
-    w.href = mapUrl(p0); w.target = '_blank'; w.rel = 'noopener';
-    const d = el('div', 'd');
-    const nr = fächer.map((f) => (f.match(/^Schrank Nr\. (\S+)$/) || [])[1]);
-    const fachText = nr.length && nr.every(Boolean) ? 'Schrank ' + nr.join(', ') : fächer.join(', ');
-    d.append((list.length === 1 ? 'Paket' : 'Pakete') + (fachText ? ' · ' + fachText : '') + ' · ');
-    const due = el('b', level(h), h < 0 ? 'Gebühr läuft' : 'gratis bis ' + fmtHM.format(new Date(Date.parse(p0.eingang) + FREE_H * 36e5)));
-    d.append(due);
-    t.append(w, d);
-    const pin = el('a', 'pin', '➤');
-    pin.href = mapUrl(p0); pin.target = '_blank'; pin.rel = 'noopener'; pin.setAttribute('aria-label', 'In Karten öffnen');
-    row.append(t, pin);
-    box.append(row);
-  }
 }
 
 function renderStats() {
@@ -424,17 +385,32 @@ function tick() {
   nf.classList.toggle('alarm', fee > 0);
 }
 
-async function load() {
+let loading = null;
+function load() {
+  if (!loading) loading = doLoad().finally(() => { loading = null; });
+  return loading;
+}
+async function doLoad() {
+  const rb = document.getElementById('refresh');
+  rb.classList.add('spin');
   try {
     apply(await api({}));
+    keepPending();
     document.getElementById('note').textContent = NOTE;
   } catch (e) {
     if (e instanceof AuthError) { store.set(''); askKey(KEY ? 'Schlüssel stimmt nicht.' : ''); KEY = ''; render(); return; }
     document.getElementById('note').textContent = packages.length
       ? 'Keine Verbindung – zeige den zuletzt gespeicherten Stand.'
       : 'Verbindung zu den Paketdaten unterbrochen. Seite neu laden.';
+  } finally {
+    rb.classList.remove('spin');
   }
   render();
+}
+document.getElementById('refresh').addEventListener('click', () => load());
+// Pakete, deren Speichern noch läuft, bleiben lokal „abgeholt“
+function keepPending() {
+  for (const p of packages) if (pending.has(p.id)) p.status = 'abgeholt';
 }
 
 // Kurzes mechanisches Klicken (Schloss), danach ein leiser heller Ton
@@ -462,6 +438,8 @@ function clickSound() {
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
+const requests = new Map();
+// Sofort reagieren: Tür öffnen und verschwinden lassen, Speichern läuft im Hintergrund
 async function markPicked(p, door, btn) {
   if (!ready || pending.has(p.id)) return;
   pending.add(p.id);
@@ -469,23 +447,31 @@ async function markPicked(p, door, btn) {
   btn.disabled = true;
   door.classList.add('open');
   clickSound();
-  let ok = false;
-  try {
-    const [d] = await Promise.all([api({ action: 'set', id: p.id, v: '1' }), wait(reduced ? 300 : 1300)]);
-    ok = true;
-    door.classList.add('gone');
-    await wait(reduced ? 0 : 450);
-    apply(d);
-    showToast('Fach ' + (p.schrank_de || p.code || '') + ' geleert', p.id);
-  } catch (e) {
-    door.classList.remove('open');
-    btn.disabled = false;
-    showToast('Konnte nicht speichern. Bitte nochmal tippen.', null);
-  } finally {
+  p.status = 'abgeholt';
+  let failed = false;
+  const req = api({ action: 'set', id: p.id, v: '1' });
+  requests.set(p.id, req);
+  req.then((d) => {
     pending.delete(p.id);
-    busy--;
-    if (ok) { renderWanted = false; render(); } else if (renderWanted && !busy) { renderWanted = false; render(); }
-  }
+    apply(d);
+    keepPending();
+    if (!busy) render();
+  }).catch(() => {
+    failed = true;
+    pending.delete(p.id);
+    const q = packages.find((x) => x.id === p.id);
+    if (q) q.status = 'offen';
+    if (!busy) render(); else renderWanted = true;
+    showToast('Konnte nicht speichern – Paket ist wieder offen.', null);
+  }).finally(() => requests.delete(p.id));
+
+  await wait(reduced ? 250 : 1200);
+  door.classList.add('gone');
+  await wait(reduced ? 0 : 450);
+  busy--;
+  renderWanted = false;
+  render();
+  if (!failed) showToast('Fach ' + (p.schrank_de || p.code || '') + ' geleert', p.id);
 }
 
 function showToast(text, id) {
@@ -500,7 +486,14 @@ document.getElementById('undo').addEventListener('click', async () => {
   const id = undoId;
   document.getElementById('toast').hidden = true;
   if (!ready || !id) return;
-  try { apply(await api({ action: 'set', id: id, v: '0' })); render(); } catch (e) { showToast('Rückgängig hat nicht geklappt.', null); }
+  try {
+    const q = packages.find((x) => x.id === id);
+    if (q) { q.status = 'offen'; render(); }
+    if (requests.has(id)) await requests.get(id).catch(() => {});
+    apply(await api({ action: 'set', id: id, v: '0' }));
+    keepPending();
+    render();
+  } catch (e) { showToast('Rückgängig hat nicht geklappt.', null); }
 });
 
 if (loadCache()) document.getElementById('note').textContent = 'Zeige gespeicherten Stand – wird aktualisiert …';
