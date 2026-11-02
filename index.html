@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Paketschrank</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Paketschrank">
+<meta name="theme-color" content="#0b2a6b">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500&family=Share+Tech+Mono&display=swap">
+<style>
+*,*::before,*::after{box-sizing:border-box}
+:root {
+  --bg: #e9ebe8;
+  --fg: #23262a;
+  --muted: #5d6268;
+  --frame: #3a3f45;
+  --metal: #c9cdd0;
+  --door: #dfe2e4;
+  --door-on: #f4f5f4;
+  --door-edge: #9aa0a5;
+  --handle: #8a9096;
+  --lcd: #0c1d14;
+  --lcd-fg: #8af5b4;
+  --lcd-dim: #4f9a70;
+  --ok: #1f8a5b;
+  --warn: #b7791f;
+  --bad: #c43d3d;
+  --font-ui: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-lcd: "Share Tech Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #15171a; --fg: #e4e6e8; --muted: #9aa0a6; --frame: #0a0b0c; --metal: #2b2f34;
+    --door: #3a3f45; --door-on: #4a5058; --door-edge: #23272b; --handle: #6c737b;
+    --ok: #4cc38a; --warn: #e3a948; --bad: #f07070;
+    color-scheme: dark;
+  }
+}
+html,body{margin:0;padding:0;overflow-x:hidden}
+body { background: var(--bg); color: var(--fg); font: 14px var(--font-ui); }
+[hidden]{display:none!important}
+.wrap { max-width: 62rem; margin-inline: auto; padding-top: max(24px, calc(env(safe-area-inset-top, 0px) + 12px)); padding-bottom: max(40px, calc(env(safe-area-inset-bottom, 0px) + 24px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+.cab { background: var(--metal); border: 4px solid var(--frame); border-radius: 18px; padding: 12px; }
+.crown { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+  background: var(--frame); color: #d9dde0; border-radius: 10px; padding: 10px 16px; margin-bottom: 12px; }
+.crown h1 { margin: 0; font-family: var(--font-lcd); font-weight: 400; font-size: 1.25rem; letter-spacing: .18em; text-transform: uppercase; }
+.crown .zh { font-family: var(--font-lcd); font-size: .8rem; letter-spacing: .3em; color: #9aa3a9; }
+
+.body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 11rem; gap: 10px; align-items: start; }
+.col { display: grid; gap: 10px; align-content: start; min-width: 0; }
+
+.term { order: 3; background: var(--frame); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 10px; position: sticky; top: 12px; }
+.scr { background: var(--lcd); border-radius: 6px; padding: 8px 10px; box-shadow: inset 0 0 0 2px #000; }
+.scr .k { font-family: var(--font-lcd); font-size: .72rem; letter-spacing: .2em; color: var(--lcd-dim); text-transform: uppercase; }
+.scr .v { font-family: var(--font-lcd); font-size: 2rem; line-height: 1.1; color: var(--lcd-fg); text-shadow: 0 0 10px rgba(138,245,180,.45); font-variant-numeric: tabular-nums; }
+.scr .v.alarm { color: #ff8a8a; text-shadow: 0 0 10px rgba(255,138,138,.5); }
+.scr .small { font-family: var(--font-lcd); font-size: .78rem; color: var(--lcd-fg); }
+.keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+.keys span { background: #2a2f34; color: #c4cace; border-radius: 4px; text-align: center; font-family: var(--font-lcd); font-size: .8rem; padding: 6px 0; box-shadow: inset 0 -2px 0 #15181b; }
+.slot { height: 8px; border-radius: 4px; background: #000; }
+
+.door { position: relative; background: var(--door); border: 1px solid var(--door-edge); border-radius: 6px; min-height: 64px;
+  padding: 10px 28px 10px 12px; box-shadow: inset 0 1px 0 rgba(255,255,255,.25), inset 0 -2px 0 rgba(0,0,0,.08); }
+.door::after { content: ""; position: absolute; right: 9px; top: 50%; transform: translateY(-50%); width: 6px; height: 40px; border-radius: 3px; background: var(--handle); }
+.door .no { font-family: var(--font-lcd); font-size: .8rem; color: var(--muted); letter-spacing: .1em; }
+.door.on { background: var(--door-on); border-color: var(--handle); display: flex; flex-direction: column; gap: 10px; }
+.door.on.bad { border-color: var(--bad); }
+.head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.plate { display: inline-flex; align-items: baseline; gap: 6px; border: 1px solid var(--door-edge); border-radius: 4px; padding: 2px 8px; background: var(--bg); min-width: 0; }
+.plate .l { font-family: var(--font-lcd); font-size: .72rem; letter-spacing: .15em; color: var(--muted); text-transform: uppercase; }
+.plate .v { font-weight: 500; font-size: 1rem; }
+.zhs { font-size: .78rem; color: var(--muted); margin-top: 2px; }
+.led { width: 10px; height: 10px; border-radius: 50%; flex: none; background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+.led.warn { background: var(--warn); box-shadow: 0 0 8px var(--warn); }
+.led.bad { background: var(--bad); box-shadow: 0 0 10px var(--bad); }
+.lcd { background: var(--lcd); border-radius: 6px; padding: 7px 10px; box-shadow: inset 0 0 0 2px #000; }
+.lcd .k { font-family: var(--font-lcd); font-size: .7rem; letter-spacing: .2em; color: var(--lcd-dim); text-transform: uppercase; }
+.lcd .code { font-family: var(--font-lcd); font-size: 1.9rem; letter-spacing: .22em; color: var(--lcd-fg); text-shadow: 0 0 10px rgba(138,245,180,.5); line-height: 1.15; overflow-wrap: anywhere; }
+.lbl { font-family: var(--font-lcd); font-size: .72rem; letter-spacing: .15em; color: var(--muted); text-transform: uppercase; }
+.ort { font-size: .95rem; line-height: 1.4; }
+.time { font-family: var(--font-lcd); font-size: .85rem; letter-spacing: .03em; font-variant-numeric: tabular-nums; }
+.time.ok { color: var(--ok); } .time.warn { color: var(--warn); } .time.bad { color: var(--bad); }
+.pick { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 10px 12px; cursor: pointer;
+  font-family: var(--font-lcd); font-size: .9rem; letter-spacing: .22em; text-transform: uppercase; color: #d9dde0;
+  background: var(--frame); border: 0; border-radius: 8px; box-shadow: 0 4px 0 #000, inset 0 1px 0 rgba(255,255,255,.12); transition: transform .08s, box-shadow .08s; }
+.pick .ring { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--lcd-fg); display: grid; place-items: center;
+  color: var(--lcd-fg); font-size: .8rem; letter-spacing: 0; box-shadow: 0 0 8px rgba(138,245,180,.45); }
+.pick:hover .ring { background: rgba(138,245,180,.15); }
+.pick:active { transform: translateY(3px); box-shadow: 0 1px 0 #000, inset 0 1px 0 rgba(255,255,255,.12); }
+.pick:focus-visible, .undo:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+.pick[disabled] { opacity: .6; cursor: default; }
+
+.feet { display: flex; justify-content: space-between; padding: 0 12%; }
+.feet span { width: 54px; height: 10px; background: var(--frame); border-radius: 0 0 5px 5px; }
+.note { margin-top: 14px; font-size: .85rem; color: var(--muted); text-align: center; }
+
+.toast { position: fixed; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
+  background: var(--frame); color: #e4e6e8; border-radius: 8px; padding: 10px 14px; display: flex; gap: 14px; align-items: center; font-size: .9rem; max-width: calc(100% - 32px); }
+.undo { font: inherit; font-weight: 500; background: none; border: 0; color: var(--lcd-fg); cursor: pointer; padding: 0; }
+
+
+/* Statistik im Terminal */
+.stats .row { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; font-family: var(--font-lcd); font-size: .8rem; color: var(--lcd-dim); padding: 2px 0; }
+.stats .row span, .stats .row b { white-space: nowrap; }
+.stats .row b { font-weight: 400; color: var(--lcd-fg); font-size: 1rem; font-variant-numeric: tabular-nums; text-shadow: 0 0 8px rgba(138,245,180,.4); }
+.stats .row.rec b { color: #ffd479; text-shadow: 0 0 8px rgba(255,212,121,.5); }
+
+/* Belegte Tür: Türblatt (leaf) schwingt auf, dahinter das Fach (cavity) */
+.door.on { padding: 0; display: block; background: #050806; border-color: var(--handle); perspective: 1000px; }
+.door.on::after { display: none; }
+.leaf { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 10px; padding: 10px 28px 10px 12px;
+  background: var(--door-on); border-radius: 5px; transform-origin: left center;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.25), inset 0 -2px 0 rgba(0,0,0,.08);
+  transition: transform .75s cubic-bezier(.3,.75,.2,1), box-shadow .75s; }
+.leaf::after { content: ""; position: absolute; right: 9px; top: 50%; transform: translateY(-50%); width: 6px; height: 40px; border-radius: 3px; background: var(--handle); }
+.cavity { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 10px; border-radius: 5px;
+  background: radial-gradient(circle at 50% 45%, #12402a, #050806 70%); color: var(--lcd-fg);
+  font-family: var(--font-lcd); letter-spacing: .25em; text-transform: uppercase; font-size: .85rem; opacity: 0; transition: opacity .3s .2s; }
+.chk { width: 64px; height: 64px; border-radius: 50%; border: 3px solid var(--lcd-fg); display: grid; place-items: center;
+  font-size: 2rem; letter-spacing: 0; box-shadow: 0 0 18px rgba(138,245,180,.6), inset 0 0 12px rgba(138,245,180,.35);
+  text-shadow: 0 0 10px rgba(138,245,180,.8); transform: scale(.3); transition: transform .55s .3s cubic-bezier(.2,1.7,.4,1); }
+.door.open .leaf { transform: rotateY(-108deg); box-shadow: 24px 0 40px rgba(0,0,0,.45); }
+.door.open .cavity { opacity: 1; }
+.door.open .chk { transform: scale(1); }
+.door.gone { animation: vanish .45s ease-in forwards; }
+@keyframes vanish { to { opacity: 0; transform: scale(.95); } }
+
+/* Lampe pulsiert – Tempo setzt das Skript (--pulse) */
+.led { animation: pulse var(--pulse, 3s) ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .3; box-shadow: none; } }
+
+.keybox { max-width: 26rem; margin: 18px auto 0; display: grid; gap: 10px; background: var(--metal); border: 3px solid var(--frame); border-radius: 12px; padding: 14px; }
+.keybox input { font: 1rem var(--font-lcd); letter-spacing: .05em; padding: 10px 12px; border-radius: 6px; border: 0; background: var(--lcd); color: var(--lcd-fg); box-shadow: inset 0 0 0 2px #000; }
+.keybox input::placeholder { color: var(--lcd-dim); }
+
+@media (max-width: 720px) {
+  .body { grid-template-columns: minmax(0, 1fr); }
+  .term { position: static; order: -1; flex-direction: row; flex-wrap: wrap; }
+  .term .scr { flex: 1 1 6rem; }
+  .term .scr.stats { flex-basis: 100%; display: grid; grid-template-columns: 1fr 1fr; column-gap: 18px; }
+  .term .scr.stats .k { grid-column: 1 / -1; }
+  .keys, .slot { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .led { animation: none; }
+  .leaf, .cavity, .chk { transition: none; }
+  .door.gone { animation: none; opacity: 0; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="cab">
+    <div class="crown">
+      <h1>Paketschrank</h1>
+      <span class="zh">取件 · 丰巢 · 菜鸟</span>
+    </div>
+    <div class="body">
+      <div class="col" id="left"></div>
+      <div class="term" aria-label="Übersicht">
+        <div class="scr"><div class="k">Offen</div><div class="v" id="nOpen">--</div></div>
+        <div class="scr"><div class="k">Gebühr</div><div class="v" id="nFee">--</div></div>
+        <div class="scr"><div class="k">Stand</div><div class="small" id="stand">wird geladen</div></div>
+        <div class="scr stats" aria-label="Statistik">
+          <div class="k">Statistik</div>
+          <div class="row"><span>Woche</span><b id="sWeek">--</b></div>
+          <div class="row"><span>Monat</span><b id="sMonth">--</b></div>
+          <div class="row"><span>Ø Zeit</span><b id="sAvg">--</b></div>
+          <div class="row"><span>Serie ✓</span><b id="sStreak">--</b></div>
+          <div class="row rec"><span>Rekord ★</span><b id="sBest">--</b></div>
+        </div>
+        <div class="keys" aria-hidden="true"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>✕</span><span>0</span><span>✓</span></div>
+        <div class="slot" aria-hidden="true"></div>
+      </div>
+      <div class="col" id="right"></div>
+    </div>
+  </div>
+  <div class="feet" aria-hidden="true"><span></span><span></span></div>
+  <p class="note" id="note">Neue Abhol-SMS erscheinen alle 5 Minuten automatisch. Nach dem Abholen auf „Abgeholt“ tippen.</p>
+</div>
+<form class="keybox" id="keybox" hidden>
+  <div class="lbl">Zugangsschlüssel</div>
+  <input id="keyIn" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Schlüssel aus dem Apps Script einfügen">
+  <button class="pick" type="submit"><span class="ring">✓</span><span>Speichern</span></button>
+  <div class="zhs" id="keyMsg"></div>
+</form>
+<div class="toast" id="toast" hidden><span id="toastText"></span><button class="undo" id="undo" type="button">Rückgängig</button></div>
+
+<script>
+const FREE_H = 18;
+let packages = [];
+let stand = null;
+let stats = null;
+let ready = false;
+let busy = 0, renderWanted = false;
+let undoId = null, toastTimer = null;
+let live = [];          // sichtbare Türen für den Sekunden-Countdown
+let audio = null;
+const pending = new Set();
+const NOTE = 'Neue Abhol-SMS erscheinen alle 5 Minuten automatisch. Nach dem Abholen auf „Abgeholt“ tippen.';
+const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// Schnittstelle zum Google Apps Script
+const API = 'https://script.google.com/macros/s/AKfycbzpUvncCB_NHhoTiW-f1r5LbzJ_k0RYDlreDgSknE02GYcThLq8nh7vwlFc-37-FDwD/exec';
+const store = {
+  get() { try { return localStorage.getItem('pk_key') || ''; } catch (e) { return ''; } },
+  set(v) { try { v ? localStorage.setItem('pk_key', v) : localStorage.removeItem('pk_key'); } catch (e) {} }
+};
+// Schlüssel kann auch per Link übergeben werden: …/#key=SCHLÜSSEL
+(() => {
+  const m = location.hash.match(/key=([A-Za-z0-9]+)/);
+  if (m) { store.set(m[1]); history.replaceState(null, '', location.pathname); }
+})();
+let KEY = store.get();
+
+class AuthError extends Error {}
+async function api(params) {
+  if (!KEY) throw new AuthError('kein Schlüssel');
+  const u = new URL(API);
+  u.searchParams.set('key', KEY);
+  for (const k in params) u.searchParams.set(k, params[k]);
+  const r = await fetch(u.toString(), { redirect: 'follow', cache: 'no-store' });
+  const d = await r.json();
+  if (d.error === 'Kein Zugriff') throw new AuthError(d.error);
+  if (d.error) throw new Error(d.error);
+  return d;
+}
+function apply(d) {
+  packages = d.pakete || [];
+  stand = d.stand;
+  stats = d.stats || null;
+  ready = true;
+}
+function askKey(msg) {
+  ready = false;
+  document.getElementById('keybox').hidden = false;
+  document.getElementById('keyMsg').textContent = msg || '';
+  document.getElementById('note').textContent = 'Einmalig den Schlüssel eingeben – danach bleibt er auf diesem Gerät gespeichert.';
+}
+document.getElementById('keybox').addEventListener('submit', (ev) => {
+  ev.preventDefault();
+  KEY = document.getElementById('keyIn').value.trim();
+  store.set(KEY);
+  document.getElementById('keybox').hidden = true;
+  load();
+});
+
+const fmtTime = new Intl.DateTimeFormat('de-DE', { weekday: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
+const restHours = (p) => FREE_H - (Date.now() - Date.parse(p.eingang)) / 36e5;
+const level = (h) => h < 0 ? 'bad' : h <= 6 ? 'warn' : 'ok';
+const clock = (h) => {
+  const s = Math.floor(Math.abs(h) * 3600);
+  return Math.floor(s / 3600) + ':' + String(Math.floor(s / 60) % 60).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
+};
+// Je knapper, desto schneller pulsiert die Lampe
+const pulse = (h) => h < 0 ? '.35s' : h <= 1 ? '.5s' : h <= 3 ? '.9s' : h <= 6 ? '1.6s' : '3.2s';
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const pad = (n) => String(n).padStart(2, '0');
+
+function emptyDoor(n) { const d = el('div', 'door'); d.append(el('span', 'no', pad(n))); return d; }
+
+function fullDoor(p) {
+  const d = el('div', 'door on');
+
+  const cav = el('div', 'cavity');
+  cav.setAttribute('aria-hidden', 'true');
+  cav.append(el('span', 'chk', '✓'), el('span', '', 'Abgeholt'));
+
+  const leaf = el('div', 'leaf');
+  const head = el('div', 'head');
+  const left = el('div');
+  const plate = el('span', 'plate');
+  plate.append(el('span', 'l', 'Fach'), el('span', 'v', p.schrank_de || p.schrank || '–'));
+  left.append(plate);
+  if (p.schrank && p.schrank_de) left.append(el('div', 'zhs', p.schrank));
+  const led = el('span', 'led');
+  head.append(left, led);
+  leaf.append(head);
+
+  const lcd = el('div', 'lcd');
+  lcd.append(el('div', 'k', 'Abholcode'), el('div', 'code', p.code || '–'));
+  leaf.append(lcd);
+
+  const o = el('div');
+  o.append(el('div', 'lbl', 'Ort'), el('div', 'ort', p.ort_de || p.ort || '–'));
+  if (p.ort && p.ort_de) o.append(el('div', 'zhs', p.ort));
+  leaf.append(o);
+
+  const time = el('div', 'time');
+  leaf.append(time);
+
+  const b = el('button', 'pick');
+  b.type = 'button';
+  b.append(el('span', 'ring', '✓'), el('span', '', 'Abgeholt'));
+  if (!ready || pending.has(p.id)) b.disabled = true;
+  b.addEventListener('click', () => markPicked(p, d, b));
+  leaf.append(b);
+
+  d.append(cav, leaf);
+  live.push({ p, d, led, time, lvl: null, pulse: null });
+  return d;
+}
+
+function render() {
+  if (busy) { renderWanted = true; return; }
+  live = [];
+  const open = packages.filter((p) => p.status === 'offen' && p.eingang).sort((a, b) => restHours(a) - restHours(b));
+  const L = document.getElementById('left'), R = document.getElementById('right');
+  L.replaceChildren(); R.replaceChildren();
+  const total = Math.max(6, open.length + (open.length % 2) + 2);
+  for (let i = 0; i < total; i++) {
+    (i % 2 === 0 ? L : R).append(open[i] ? fullDoor(open[i]) : emptyDoor(i + 1));
+  }
+  document.getElementById('nOpen').textContent = pad(open.length);
+  document.getElementById('stand').textContent = stand ? fmtTime.format(new Date(stand)) : (ready ? 'noch nie' : 'offline');
+  renderStats();
+  tick();
+}
+
+function renderStats() {
+  const s = stats;
+  const set = (id, v) => { document.getElementById(id).textContent = v; };
+  if (!s) { ['sWeek', 'sMonth', 'sAvg', 'sStreak', 'sBest'].forEach((id) => set(id, '--')); return; }
+  set('sWeek', pad(s.woche));
+  set('sMonth', pad(s.monat));
+  set('sAvg', s.avgMin == null ? '--' : Math.floor(s.avgMin / 60) + ':' + pad(s.avgMin % 60) + ' h');
+  set('sStreak', pad(s.serie));
+  set('sBest', pad(s.rekord));
+}
+
+// Läuft jede Sekunde: Countdown, Lampenfarbe und Puls-Tempo
+function tick() {
+  let fee = 0;
+  for (const x of live) {
+    if (x.d.classList.contains('open')) continue;
+    const h = restHours(x.p);
+    const lvl = level(h);
+    if (h < 0) fee++;
+    x.time.textContent = h < 0 ? '● Gebühr läuft seit ' + clock(h) : '● Kostenlos noch ' + clock(h);
+    if (lvl !== x.lvl) {
+      x.lvl = lvl;
+      x.time.className = 'time ' + lvl;
+      x.led.className = 'led ' + lvl;
+      x.d.classList.toggle('bad', lvl === 'bad');
+    }
+    const ps = pulse(h);
+    if (ps !== x.pulse) { x.pulse = ps; x.led.style.setProperty('--pulse', ps); }
+  }
+  const nf = document.getElementById('nFee');
+  nf.textContent = pad(fee);
+  nf.classList.toggle('alarm', fee > 0);
+}
+
+async function load() {
+  try {
+    apply(await api({}));
+    document.getElementById('note').textContent = NOTE;
+  } catch (e) {
+    if (e instanceof AuthError) { store.set(''); askKey(KEY ? 'Schlüssel stimmt nicht.' : ''); KEY = ''; render(); return; }
+    document.getElementById('note').textContent = 'Verbindung zu den Paketdaten unterbrochen. Seite neu laden.';
+  }
+  render();
+}
+
+// Kurzes mechanisches Klicken (Schloss), danach ein leiser heller Ton
+function clickSound() {
+  try {
+    const A = window.AudioContext || window.webkitAudioContext;
+    if (!A) return;
+    audio = audio || new A();
+    if (audio.state === 'suspended') audio.resume();
+    const t = audio.currentTime;
+    const blip = (at, freq, type, vol, len) => {
+      const o = audio.createOscillator(), g = audio.createGain();
+      o.type = type; o.frequency.setValueAtTime(freq, t + at);
+      g.gain.setValueAtTime(0.0001, t + at);
+      g.gain.exponentialRampToValueAtTime(vol, t + at + 0.004);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + at + len);
+      o.connect(g).connect(audio.destination);
+      o.start(t + at); o.stop(t + at + len + 0.02);
+    };
+    blip(0, 180, 'square', 0.06, 0.04);
+    blip(0.07, 1200, 'square', 0.035, 0.03);
+    blip(0.45, 1760, 'sine', 0.05, 0.35);
+  } catch (e) {}
+}
+
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function markPicked(p, door, btn) {
+  if (!ready || pending.has(p.id)) return;
+  pending.add(p.id);
+  busy++;
+  btn.disabled = true;
+  door.classList.add('open');
+  clickSound();
+  let ok = false;
+  try {
+    const [d] = await Promise.all([api({ action: 'set', id: p.id, v: '1' }), wait(reduced ? 300 : 1300)]);
+    ok = true;
+    door.classList.add('gone');
+    await wait(reduced ? 0 : 450);
+    apply(d);
+    showToast('Fach ' + (p.schrank_de || p.code || '') + ' geleert', p.id);
+  } catch (e) {
+    door.classList.remove('open');
+    btn.disabled = false;
+    showToast('Konnte nicht speichern. Bitte nochmal tippen.', null);
+  } finally {
+    pending.delete(p.id);
+    busy--;
+    if (ok) { renderWanted = false; render(); } else if (renderWanted && !busy) { renderWanted = false; render(); }
+  }
+}
+
+function showToast(text, id) {
+  undoId = id;
+  document.getElementById('toastText').textContent = text;
+  document.getElementById('undo').hidden = !id;
+  document.getElementById('toast').hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { document.getElementById('toast').hidden = true; undoId = null; }, 6000);
+}
+document.getElementById('undo').addEventListener('click', async () => {
+  const id = undoId;
+  document.getElementById('toast').hidden = true;
+  if (!ready || !id) return;
+  try { apply(await api({ action: 'set', id: id, v: '0' })); render(); } catch (e) { showToast('Rückgängig hat nicht geklappt.', null); }
+});
+
+render();
+load();
+setInterval(tick, 1000);      // Countdown sekundengenau
+setInterval(load, 120000);    // Daten alle 2 Minuten neu laden
+document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
+</script>
+</body>
+</html>
