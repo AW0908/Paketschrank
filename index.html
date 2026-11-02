@@ -140,6 +140,19 @@ body { background: var(--bg); color: var(--fg); font: 14px var(--font-ui); }
 .led { animation: pulse var(--pulse, 3s) ease-in-out infinite; }
 @keyframes pulse { 50% { opacity: .3; box-shadow: none; } }
 
+/* Abholliste pro Ort */
+.route { display: grid; gap: 8px; margin-bottom: 12px; }
+.stop { display: flex; align-items: center; gap: 12px; background: var(--lcd); border-radius: 8px; padding: 10px 12px; box-shadow: inset 0 0 0 2px #000; color: var(--lcd-fg); }
+.stop .n { font-family: var(--font-lcd); font-size: 1.9rem; line-height: 1; min-width: 2.2ch; text-align: center; text-shadow: 0 0 10px rgba(138,245,180,.45); }
+.stop .t { min-width: 0; flex: 1; }
+.stop .w { font-size: .95rem; color: #d7f7e4; text-decoration: none; display: inline-block; }
+.stop .w:hover { text-decoration: underline; }
+.stop .d { font-family: var(--font-lcd); font-size: .78rem; letter-spacing: .04em; color: var(--lcd-dim); margin-top: 3px; }
+.stop .d b { font-weight: 400; color: var(--lcd-fg); }
+.stop .d b.warn { color: #ffd479; } .stop .d b.bad { color: #ff8a8a; }
+.stop .pin { flex: none; font-size: 1.1rem; text-decoration: none; color: var(--lcd-fg); opacity: .8; padding: 4px; }
+a.ort { color: inherit; text-decoration: underline dotted var(--door-edge); text-underline-offset: 3px; }
+
 .keybox { max-width: 26rem; margin: 18px auto 0; display: grid; gap: 10px; background: var(--metal); border: 3px solid var(--frame); border-radius: 12px; padding: 14px; }
 .keybox input { font: 1rem var(--font-lcd); letter-spacing: .05em; padding: 10px 12px; border-radius: 6px; border: 0; background: var(--lcd); color: var(--lcd-fg); box-shadow: inset 0 0 0 2px #000; }
 .keybox input::placeholder { color: var(--lcd-dim); }
@@ -166,6 +179,7 @@ body { background: var(--bg); color: var(--fg); font: 14px var(--font-ui); }
       <h1>Paketschrank</h1>
       <span class="zh">取件 · 丰巢 · 菜鸟</span>
     </div>
+    <div class="route" id="route" hidden></div>
     <div class="body">
       <div class="col" id="left"></div>
       <div class="term" aria-label="Übersicht">
@@ -241,7 +255,18 @@ function apply(d) {
   stand = d.stand;
   stats = d.stats || null;
   ready = true;
+  try { localStorage.setItem('pk_cache', JSON.stringify({ pakete: packages, stand, stats })); } catch (e) {}
 }
+// Beim Start sofort den zuletzt gespeicherten Stand zeigen
+function loadCache() {
+  try {
+    const c = JSON.parse(localStorage.getItem('pk_cache') || 'null');
+    if (c) { packages = c.pakete || []; stand = c.stand; stats = c.stats || null; return true; }
+  } catch (e) {}
+  return false;
+}
+// Karte: Apple Karten mit der chinesischen Adresse (findet sie in China am besten)
+const mapUrl = (p) => 'https://maps.apple.com/?q=' + encodeURIComponent(p.ort || p.ort_de || '');
 function askKey(msg) {
   ready = false;
   document.getElementById('keybox').hidden = false;
@@ -293,7 +318,9 @@ function fullDoor(p) {
   leaf.append(lcd);
 
   const o = el('div');
-  o.append(el('div', 'lbl', 'Ort'), el('div', 'ort', p.ort_de || p.ort || '–'));
+  const ol = el('a', 'ort', p.ort_de || p.ort || '–');
+  if (p.ort || p.ort_de) { ol.href = mapUrl(p); ol.target = '_blank'; ol.rel = 'noopener'; }
+  o.append(el('div', 'lbl', 'Ort'), ol);
   if (p.ort && p.ort_de) o.append(el('div', 'zhs', p.ort));
   leaf.append(o);
 
@@ -325,7 +352,42 @@ function render() {
   document.getElementById('nOpen').textContent = pad(open.length);
   document.getElementById('stand').textContent = stand ? fmtTime.format(new Date(stand)) : (ready ? 'noch nie' : 'offline');
   renderStats();
+  renderRoute(open);
   tick();
+}
+
+const fmtHM = new Intl.DateTimeFormat('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
+function renderRoute(open) {
+  const box = document.getElementById('route');
+  box.replaceChildren();
+  const groups = new Map();
+  for (const p of open) {
+    const k = p.ort || p.ort_de || '–';
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(p);
+  }
+  box.hidden = groups.size === 0;
+  for (const list of groups.values()) {
+    const p0 = list[0]; // Liste ist schon nach Dringlichkeit sortiert
+    const fächer = [...new Set(list.map((p) => p.schrank_de || p.schrank).filter(Boolean))];
+    const h = restHours(p0);
+    const row = el('div', 'stop');
+    row.append(el('div', 'n', String(list.length)));
+    const t = el('div', 't');
+    const w = el('a', 'w', p0.ort_de || p0.ort || '–');
+    w.href = mapUrl(p0); w.target = '_blank'; w.rel = 'noopener';
+    const d = el('div', 'd');
+    const nr = fächer.map((f) => (f.match(/^Schrank Nr\. (\S+)$/) || [])[1]);
+    const fachText = nr.length && nr.every(Boolean) ? 'Schrank ' + nr.join(', ') : fächer.join(', ');
+    d.append((list.length === 1 ? 'Paket' : 'Pakete') + (fachText ? ' · ' + fachText : '') + ' · ');
+    const due = el('b', level(h), h < 0 ? 'Gebühr läuft' : 'gratis bis ' + fmtHM.format(new Date(Date.parse(p0.eingang) + FREE_H * 36e5)));
+    d.append(due);
+    t.append(w, d);
+    const pin = el('a', 'pin', '➤');
+    pin.href = mapUrl(p0); pin.target = '_blank'; pin.rel = 'noopener'; pin.setAttribute('aria-label', 'In Karten öffnen');
+    row.append(t, pin);
+    box.append(row);
+  }
 }
 
 function renderStats() {
@@ -368,7 +430,9 @@ async function load() {
     document.getElementById('note').textContent = NOTE;
   } catch (e) {
     if (e instanceof AuthError) { store.set(''); askKey(KEY ? 'Schlüssel stimmt nicht.' : ''); KEY = ''; render(); return; }
-    document.getElementById('note').textContent = 'Verbindung zu den Paketdaten unterbrochen. Seite neu laden.';
+    document.getElementById('note').textContent = packages.length
+      ? 'Keine Verbindung – zeige den zuletzt gespeicherten Stand.'
+      : 'Verbindung zu den Paketdaten unterbrochen. Seite neu laden.';
   }
   render();
 }
@@ -439,8 +503,10 @@ document.getElementById('undo').addEventListener('click', async () => {
   try { apply(await api({ action: 'set', id: id, v: '0' })); render(); } catch (e) { showToast('Rückgängig hat nicht geklappt.', null); }
 });
 
+if (loadCache()) document.getElementById('note').textContent = 'Zeige gespeicherten Stand – wird aktualisiert …';
 render();
 load();
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 setInterval(tick, 1000);      // Countdown sekundengenau
 setInterval(load, 120000);    // Daten alle 2 Minuten neu laden
 document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
