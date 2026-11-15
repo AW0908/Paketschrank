@@ -202,6 +202,7 @@ body { background: var(--bg); color: var(--fg); font: 14px var(--font-ui); }
           <div class="row"><span>Ø Zeit</span><b id="sAvg">--</b></div>
           <div class="row"><span>Serie ✓</span><b id="sStreak">--</b></div>
           <div class="row rec"><span>Rekord ★</span><b id="sBest">--</b></div>
+          <div class="row"><span>Gesamt</span><b id="sTotal">--</b></div>
         </div>
         <div class="keys" aria-hidden="true"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>✕</span><span>0</span><span>✓</span></div>
         <div class="slot" aria-hidden="true"></div>
@@ -364,12 +365,13 @@ function render() {
 function renderStats() {
   const s = stats;
   const set = (id, v) => { document.getElementById(id).textContent = v; };
-  if (!s) { ['sWeek', 'sMonth', 'sAvg', 'sStreak', 'sBest'].forEach((id) => set(id, '--')); return; }
+  if (!s) { ['sWeek', 'sMonth', 'sAvg', 'sStreak', 'sBest', 'sTotal'].forEach((id) => set(id, '--')); return; }
   set('sWeek', pad(s.woche));
   set('sMonth', pad(s.monat));
   set('sAvg', s.avgMin == null ? '--' : Math.floor(s.avgMin / 60) + ':' + pad(s.avgMin % 60) + ' h');
   set('sStreak', pad(s.serie));
   set('sBest', pad(s.rekord));
+  set('sTotal', s.gesamt == null ? '--' : pad(s.gesamt));
 }
 
 // Läuft jede Sekunde: Countdown, Lampenfarbe und Puls-Tempo
